@@ -17,6 +17,8 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import cpw.mods.fml.common.Loader;
+
 /**
  * @author CovertJaguar <http://www.railcraft.info>
  */
@@ -103,15 +105,26 @@ public final class AdjacentTileCache {
 
     public TileEntity getTileOnSide(ForgeDirection side) {
         int s = side.ordinal();
+        World world = source.getWorldObj();
+        int sx = source.xCoord + side.offsetX;
+        int sy = source.yCoord + side.offsetY;
+        int sz = source.zCoord + side.offsetZ;
+        boolean cubicChunksLoaded = Loader.isModLoaded("cubicchunks");
+        if (cubicChunksLoaded && !world.checkChunksExist(sx, sy, sz, sx, sy, sz)) {
+            setTile(s, null);
+            return null;
+        }
+
         if (cache[s] != null) {
-            if (cache[s].isInvalid() || !areCoordinatesOnSide(side, cache[s])) {
+            if (cache[s].isInvalid() || !areCoordinatesOnSide(side, cache[s])
+                    || (cubicChunksLoaded && world.getTileEntity(sx, sy, sz) != cache[s])) {
                 setTile(s, null);
             } else {
                 return cache[s];
             }
         }
 
-        if (timer[s].hasTriggered(source.getWorldObj(), delay[s])) {
+        if (timer[s].hasTriggered(world, delay[s])) {
             setTile(s, searchSide(side));
             if (cache[s] == null) {
                 incrementDelay(s);
